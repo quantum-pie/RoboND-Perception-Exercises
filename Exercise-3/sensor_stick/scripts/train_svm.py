@@ -6,7 +6,11 @@ import matplotlib.pyplot as plt
 from sklearn import svm
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn import cross_validation
+from sklearn import model_selection
 from sklearn import metrics
+from sklearn.model_selection import GridSearchCV
+from sklearn.pipeline import Pipeline
+from sklearn.decomposition import PCA
 
 def plot_confusion_matrix(cm, classes,
                           normalize=False,
@@ -62,7 +66,23 @@ encoder = LabelEncoder()
 y_train = encoder.fit_transform(y_train)
 
 # Create classifier
-clf = svm.SVC(kernel='linear')
+estimators = [('clf', svm.SVC())]
+pipe = Pipeline(estimators)
+pipe.set_params(clf__class_weight='balanced')
+pipe.set_params(clf__random_state=42)
+pipe.set_params(clf__kernel='linear')
+
+param_grid = dict(clf__C=[5e-1, 1, 5, 10, 20, 50, 1000, 10000])
+
+clf = GridSearchCV(estimator=pipe,
+				   param_grid=param_grid,
+				   cv=model_selection.KFold(5, random_state=42, shuffle=True),
+				   scoring=('accuracy'),
+				   n_jobs=-1)
+
+clf = clf.fit(X_train, y_train)
+print(clf.best_estimator_)
+clf = clf.best_estimator_
 
 # Set up 5-fold cross-validation
 kf = cross_validation.KFold(len(X_train),
